@@ -114,14 +114,21 @@
               ;
           };
 
-          devShells.default = pkgs.mkShell {
+          devShells.default = pkgs.mkShell rec {
             packages = [
-              # Rust
+              # Build tools
               rust
+              pkgs.pkg-config
 
               # Nix
               pkgs.nil
             ];
+
+            buildInputs = [
+              pkgs.openssl
+            ];
+
+            LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
             shellHook = ''
               export PS1="\n[nix-shell:\w]$ "
