@@ -40,9 +40,21 @@
           overlays = [ inputs.rust-overlay.overlays.default ];
 
           src = lib.cleanSource ./.;
+          nativeBuildInputs = [
+            # Build tools
+            rust
+            pkgs.pkg-config
+
+            # Nix
+            pkgs.nil
+          ];
+          buildInputs = [
+            pkgs.openssl
+          ];
+          LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
           cargoArtifacts = craneLib.buildDepsOnly {
-            inherit src;
+            inherit src nativeBuildInputs buildInputs LD_LIBRARY_PATH;
           };
           cargo-build-targets = {
             x86_64-linux.CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
@@ -51,7 +63,7 @@
             aarch64-darwin.CARGO_BUILD_TARGET = "aarch64-apple-darwin";
           };
           skypo = craneLib.buildPackage {
-            inherit src cargoArtifacts;
+            inherit src cargoArtifacts nativeBuildInputs buildInputs LD_LIBRARY_PATH;
             strictDeps = true;
             doCheck = true;
 
@@ -59,11 +71,11 @@
             CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
           };
           cargo-clippy = craneLib.cargoClippy {
-            inherit src cargoArtifacts;
+            inherit src cargoArtifacts nativeBuildInputs buildInputs LD_LIBRARY_PATH;
             cargoClippyExtraArgs = "--verbose -- --deny warning";
           };
           cargo-doc = craneLib.cargoDoc {
-            inherit src cargoArtifacts;
+            inherit src cargoArtifacts nativeBuildInputs buildInputs LD_LIBRARY_PATH;
           };
         in
         {
@@ -114,14 +126,8 @@
               ;
           };
 
-          devShells.default = pkgs.mkShell {
-            packages = [
-              # Rust
-              rust
-
-              # Nix
-              pkgs.nil
-            ];
+          devShells.default = pkgs.mkShell rec {
+            inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
 
             shellHook = ''
               export PS1="\n[nix-shell:\w]$ "
